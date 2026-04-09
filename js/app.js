@@ -1148,8 +1148,8 @@ async function verifyZeltyConnection() {
 
   // Récupérer le restaurant sélectionné
   const ctx = window.RestaurantCtx;
-  const restaurant = restoId === '8714' ? 'dax' : restoId === '7426' ? 'mdm' : null;
-
+  const restoNom = ctx?.current()?.nom?.toLowerCase() || '';
+const restaurant = restoNom.includes('dax') ? 'dax' : restoNom.includes('mont') ? 'mdm' : null;
   resultEl.style.display = 'flex';
   resultEl.className = 'connection-result testing';
   resultEl.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Vérification en cours…';
