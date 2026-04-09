@@ -39,7 +39,6 @@
 const ZELTY_BASE  = 'https://api.zelty.fr/2.10';
 const PAGE_SIZE   = 100;
 const MAX_PAGES   = 50; // sécurité anti-boucle infinie (= 5 000 commandes max)
-const VALID_STATUS = 'closed';
 
 // ──────────────────────────────────────────────────────────────
 // MAPPING code restaurant → ID Zelty (lu depuis env)
