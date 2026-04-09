@@ -16,7 +16,7 @@ const API_BASE = 'https://maria-manager.vercel.app/api/tables';
 // La clé API est lue depuis process.env.ZELTY_API_KEY (serveur).
 // Pour configurer la clé : voir SETUP.md
 // ============================================================
-const ZELTY_PROXY_URL = 'https://maria-manager-v2.vercel.app/api/zelty/proxy';
+const ZELTY_PROXY_URL = 'https://maria-manager.vercel.app/api/zelty/proxy';
 const State = {
   currentPage: 'dashboard',
   recipes: [],
