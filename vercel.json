@@ -33,7 +33,7 @@
     },
     {
       "src": "/api/tables/(.*)",
-      "dest": "/api/tables/[...path].js"
+      "dest": "/api/tables/[...path].js?path=$1"
     },
     {
       "src": "/(.*)",
