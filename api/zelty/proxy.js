@@ -134,17 +134,17 @@ async function fetchAllOrders(apiKey, dateStart, dateEnd, restaurantId) {
   let offset      = 0;
   let pagesLoaded = 0;
 
-  while (pagesLoaded < MAX_PAGES) {
+ while (pagesLoaded < MAX_PAGES) {
     const params = new URLSearchParams({
       date_start: dateStart,
       date_end:   dateEnd,
-      status:     VALID_STATUS,
       limit:      String(PAGE_SIZE),
       offset:     String(offset),
     });
     if (restaurantId) params.set('restaurant_id', restaurantId);
 
     const url = `${ZELTY_BASE}/orders?${params.toString()}`;
+    console.log('Zelty URL:', url);
 
     let res;
     try {
