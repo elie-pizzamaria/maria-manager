@@ -244,9 +244,7 @@ module.exports = async function handler(req, res) {
       return res.status(502).json({ success: false, error: fetchError, sales: [], ca_ht: 0, ca_ttc: 0 });
     }
 
-    var closedOrders = orders.filter(function(o) {
-      return !o.status || o.status.toLowerCase() === VALID_STATUS;
-    });
+    var closedOrders = orders;
 
     var allSales = [];
     var totalCaHt = 0;
