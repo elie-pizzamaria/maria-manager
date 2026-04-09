@@ -25,9 +25,11 @@ window.RestaurantCtx = (() => {
   let _callbacks    = [];   // listeners onSwitch
 
   // ─── Helpers API ─────────────────────────────────────────────
-  async function apiFetch(path, opts = {}) {
+ async function apiFetch(path, opts = {}) {
     try {
-      const r = await fetch(path, opts);
+      const base = window.API_BASE || 'https://maria-manager.vercel.app/api/tables';
+      const url = path.startsWith('http') ? path : `${base}/${path.replace('tables/', '')}`;
+      const r = await fetch(url, opts);
       if (!r.ok) return null;
       if (opts.method === 'DELETE') return true;
       return r.json();
