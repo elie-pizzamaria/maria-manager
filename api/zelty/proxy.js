@@ -157,24 +157,15 @@ async function fetchAllOrders(apiKey, dateStart, dateEnd, restaurantId) {
       };
     }
 
-    if (!res.ok) {
+   if (!res.ok) {
+      const errorText = await res.text();
+      console.log('Zelty error response:', errorText);
       return {
         orders: allOrders,
         pagesLoaded,
-        const errorText = await res.text();
-console.log('Zelty error response:', errorText);
-error: `Zelty HTTP ${res.status} à l'offset ${offset}: ${errorText}`,
+        error: `Zelty HTTP ${res.status} à l'offset ${offset}: ${errorText}`,
       };
     }
-
-    const raw  = await res.json();
-    const page = Array.isArray(raw)
-      ? raw
-      : (Array.isArray(raw.orders) ? raw.orders
-        : Array.isArray(raw.data)   ? raw.data
-        : []);
-
-    allOrders.push(...page);
     pagesLoaded++;
 
     // Dernière page : moins de PAGE_SIZE résultats → on s'arrête
