@@ -100,8 +100,8 @@ function mapOrderToSales(order) {
   var dateParis  = utcToParis(createdAt);
   var dateParisD = utcToParisDate(createdAt);
 
-  var totalCentsTTC = order.total    || 0;
-  var totalCentsHT  = order.total_ht || 0;
+  var totalCentsTTC = (order.price && order.price.final_amount_inc_tax) || order.total || 0;
+var totalCentsHT  = (order.price && order.price.final_amount_exc_tax) || order.total_ht || 0;
   var ca_ttc = Math.round(totalCentsTTC) / 100;
   var ca_ht  = totalCentsHT > 0
     ? Math.round(totalCentsHT) / 100
