@@ -244,7 +244,9 @@ module.exports = async function handler(req, res) {
       return res.status(502).json({ success: false, error: fetchError, sales: [], ca_ht: 0, ca_ttc: 0 });
     }
 
-var closedOrders = orders;
+var closedOrders = orders.filter(function(o) {
+  return String(o.id_restaurant) === String(restaurantId);
+});
 console.log('First order raw:', JSON.stringify(orders[0]));
 
     var allSales = [];
