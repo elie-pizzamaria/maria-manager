@@ -244,7 +244,8 @@ module.exports = async function handler(req, res) {
       return res.status(502).json({ success: false, error: fetchError, sales: [], ca_ht: 0, ca_ttc: 0 });
     }
 
-    var closedOrders = orders;
+var closedOrders = orders;
+console.log('First order raw:', JSON.stringify(orders[0]));
 
     var allSales = [];
     var totalCaHt = 0;
