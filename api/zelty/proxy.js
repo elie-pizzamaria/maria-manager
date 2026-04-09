@@ -55,8 +55,8 @@ async function fetchAllOrders(apiKey, dateStart, dateEnd, restaurantId) {
 
   while (pagesLoaded < MAX_PAGES) {
     var params = new URLSearchParams({
-      from:   dateStart,
-      to:     dateEnd,
+      from:   dateStart + 'T00:00:00',
+      to:     dateEnd + 'T23:59:59',
       limit:  String(PAGE_SIZE),
       offset: String(offset),
     });
