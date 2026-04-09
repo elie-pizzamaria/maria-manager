@@ -161,7 +161,9 @@ async function fetchAllOrders(apiKey, dateStart, dateEnd, restaurantId) {
       return {
         orders: allOrders,
         pagesLoaded,
-        error: `Zelty HTTP ${res.status} à l'offset ${offset}.`,
+        const errorText = await res.text();
+console.log('Zelty error response:', errorText);
+error: `Zelty HTTP ${res.status} à l'offset ${offset}: ${errorText}`,
       };
     }
 
