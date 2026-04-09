@@ -245,7 +245,7 @@ module.exports = async function handler(req, res) {
     }
 
 var closedOrders = orders.filter(function(o) {
-  return String(o.id_restaurant) === String(restaurantId);
+  return String(o.id_restaurant) === String(restaurant_id);
 });
 console.log('First order raw:', JSON.stringify(orders[0]));
 
