@@ -8,7 +8,7 @@
 // ============================================================
 // CONFIG & STATE
 // ============================================================
-const API_BASE = 'https://maria-manager-v2.vercel.app/api/tables';
+const API_BASE = 'https://maria-manager.vercel.app/api/tables';
 
 // ============================================================
 // PROXY ZELTY — Route Next.js intégrée (aucune config requise)
