@@ -11,9 +11,9 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  const parts = req.query.path || [];
-  const table = parts[0];
-  const id    = parts[1];
+  const urlParts = (req.query.path || '').toString().split('/').filter(Boolean);
+const table = urlParts[0];
+const id    = urlParts[1];
 
   if (!table) return res.status(400).json({ error: 'Table manquante' });
 
