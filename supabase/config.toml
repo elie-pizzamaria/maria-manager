@@ -1,0 +1,14 @@
+# Supabase — Configuration locale MariaManager
+# Ce fichier est utilisé par la CLI Supabase (supabase start / deploy)
+# Documentation : https://supabase.com/docs/reference/cli/config
+
+[project]
+# À remplir après création du projet sur supabase.com
+# Exemple : id = "abcdefghijklmnop"
+id = "VOTRE_PROJECT_ID_ICI"
+
+[functions.zelty-proxy]
+# La Edge Function qui fait le proxy vers l'API Zelty
+verify_jwt = false
+# verify_jwt = false → pas besoin d'être connecté pour appeler la fonction
+# En production vous pouvez passer à true et ajouter l'anon key dans les headers

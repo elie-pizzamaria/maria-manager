@@ -1,0 +1,2430 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MariaManager – Pilotage de rentabilité</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <img src="img/logo.png" alt="MariaManager" class="logo-img" />
+        <span class="logo-text">MariaManager</span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+
+    <div class="zelty-status" id="zeltyStatusBadge">
+      <i class="fas fa-circle"></i>
+      <span id="zeltyStatusText">Mode manuel</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">EXPLOITATION</div>
+      <a href="#" class="nav-item active" data-page="dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Tableau de bord</span>
+      </a>
+      <a href="#" class="nav-item" data-page="recipes">
+        <i class="fas fa-book-open"></i>
+        <span>Recettes</span>
+      </a>
+      <a href="#" class="nav-item" data-page="sales">
+        <i class="fas fa-cash-register"></i>
+        <span>Ventes</span>
+      </a>
+      <a href="#" class="nav-item" data-page="revenue">
+        <i class="fas fa-chart-line"></i>
+        <span>Chiffre d'affaires</span>
+      </a>
+      <a href="#" class="nav-item" data-page="inventaires">
+        <i class="fas fa-clipboard-list"></i>
+        <span>Inventaires</span>
+        <span class="nav-badge" id="inventairesBadge" style="display:none;">0</span>
+      </a>
+      <div class="nav-section-label">ACHATS & PILOTAGE</div>
+      <a href="#" class="nav-item" data-page="mercuriale">
+        <i class="fas fa-tags"></i>
+        <span>Mercuriale</span>
+      </a>
+      <a href="#" class="nav-item" data-page="factures">
+        <i class="fas fa-file-invoice"></i>
+        <span>Factures</span>
+        <span class="nav-badge" id="invoicesBadge" style="display:none;">0</span>
+      </a>
+      <a href="#" class="nav-item" data-page="pareto">
+        <i class="fas fa-chart-bar"></i>
+        <span>Analyse achats</span>
+      </a>
+      <a href="#" class="nav-item" data-page="rentabilite">
+        <i class="fas fa-balance-scale"></i>
+        <span>Rentabilité</span>
+      </a>
+      <div class="nav-section-label">ADMIN</div>
+      <a href="#" class="nav-item" data-page="restaurants">
+        <i class="fas fa-store"></i>
+        <span>Restaurants</span>
+      </a>
+      <a href="#" class="nav-item" data-page="settings">
+        <i class="fas fa-cog"></i>
+        <span>Paramètres</span>
+        <span class="nav-badge" id="settingsBadge" style="display:none;">!</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-resto-name" id="sidebarRestaurantName">—</div>
+      <p class="mm-version">MariaManager v1.0</p>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="mainContent">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" id="mobileMenuBtn">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1 class="page-title" id="pageTitle">Tableau de bord</h1>
+      </div>
+      <div class="topbar-right">
+        <span class="date-display" id="dateDisplay"></span>
+        <div class="restaurant-selector-wrap" id="restaurantSelectorWrap">
+          <div class="rs-selector">
+            <i class="fas fa-store rs-icon"></i>
+            <span class="rs-label">Chargement...</span>
+            <i class="fas fa-chevron-down rs-caret"></i>
+          </div>
+        </div>
+        <button class="btn btn-zelty" id="syncBtn" title="Synchroniser avec Zelty">
+          <i class="fas fa-sync-alt"></i>
+          <span class="btn-zelty-label">Sync Zelty</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- PAGE D'ACCUEIL : CHOIX RESTAURANT -->
+    <div class="welcome-overlay" id="page-welcome" style="display:none;">
+      <div class="welcome-box">
+        <div class="welcome-logo">
+          <img src="img/logo.png" alt="MariaManager" style="width:52px;height:52px;border-radius:50%;object-fit:cover;" onerror="this.parentNode.innerHTML='<i class=\"fas fa-utensils\" style=\"font-size:28px;color:#C0392B;\"></i>'" />
+        </div>
+        <h2 class="welcome-title">Bienvenue dans MariaManager</h2>
+        <p class="welcome-sub">Choisissez un restaurant pour commencer</p>
+        <div class="welcome-resto-btns" id="welcomeRestoBtns"></div>
+        <button class="btn btn-ghost welcome-manage-btn" onclick="RestaurantCtx.goManage()">
+          <i class="fas fa-plus"></i> Ajouter un restaurant
+        </button>
+      </div>
+    </div>
+
+    <!-- PAGES -->
+    <div class="page-container">
+
+      <!-- ========== DASHBOARD PAGE ========== -->
+      <section class="page active" id="page-dashboard">
+
+        <!-- ══ ONGLETS DASHBOARD : Ce mois-ci / Aujourd'hui ══════ -->
+        <div class="dash-tabs-bar" id="dashTabsBar">
+          <button class="dash-tab active" data-dashtab="month">
+            <i class="fas fa-calendar-alt"></i> Ce mois-ci
+          </button>
+          <button class="dash-tab" data-dashtab="today">
+            <i class="fas fa-sun"></i> Aujourd'hui
+          </button>
+        </div>
+
+        <!-- ── PANNEAU CE MOIS-CI ─────────────────────────────── -->
+        <div id="dashPanelMonth" class="dash-tab-panel">
+          <div class="dash-period-grid">
+            <!-- Résultat net -->
+            <div class="dash-period-card dash-period-result">
+              <p class="dash-period-label">Résultat net du mois</p>
+              <p class="dash-period-value" id="dpMonthResult">—</p>
+              <p class="dash-period-sub" id="dpMonthResultSub">CA − Coût matière − Charges fixes</p>
+            </div>
+            <!-- CA du mois -->
+            <div class="dash-period-card">
+              <p class="dash-period-label">CA du mois</p>
+              <p class="dash-period-value" id="dpMonthCA">—</p>
+              <p class="dash-period-sub" id="dpMonthCADays">— jours enregistrés</p>
+            </div>
+            <!-- Coût matière -->
+            <div class="dash-period-card">
+              <p class="dash-period-label">Coût matière</p>
+              <p class="dash-period-value" id="dpMonthCost">—</p>
+              <p class="dash-period-sub" id="dpMonthFoodCost">Food cost : —</p>
+            </div>
+            <!-- Charges fixes -->
+            <div class="dash-period-card">
+              <p class="dash-period-label">Charges fixes</p>
+              <p class="dash-period-value" id="dpMonthCharges">—</p>
+              <p class="dash-period-sub">du mois en cours</p>
+            </div>
+          </div>
+
+          <!-- Barre progression point mort -->
+          <div class="dash-pm-block">
+            <div class="dash-pm-header">
+              <span class="dash-pm-label">
+                <i class="fas fa-flag-checkered"></i> Point mort mensuel
+              </span>
+              <span class="dash-pm-pct" id="dpMonthPMPct">—</span>
+            </div>
+            <div class="dash-pm-track">
+              <div class="dash-pm-fill" id="dpMonthPMFill" style="width:0%"></div>
+              <div class="dash-pm-marker" id="dpMonthPMMarker"></div>
+            </div>
+            <div class="dash-pm-footer">
+              <span id="dpMonthPMLeft">—</span>
+              <span id="dpMonthPMProjection" style="font-style:italic;color:var(--text-muted);font-size:12px;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PANNEAU AUJOURD'HUI ────────────────────────────── -->
+        <div id="dashPanelToday" class="dash-tab-panel" style="display:none;">
+          <div class="dash-period-grid">
+            <!-- Résultat jour -->
+            <div class="dash-period-card dash-period-result">
+              <p class="dash-period-label">Résultat du jour</p>
+              <p class="dash-period-value" id="dpTodayResult">—</p>
+              <p class="dash-period-sub">CA − coût mat. − charges du jour</p>
+            </div>
+            <!-- CA du jour -->
+            <div class="dash-period-card">
+              <p class="dash-period-label">CA du jour</p>
+              <p class="dash-period-value" id="dpTodayCA">—</p>
+              <p class="dash-period-sub" id="dpTodayCASub">Pas de CA saisi aujourd'hui</p>
+            </div>
+            <!-- Coût matière jour -->
+            <div class="dash-period-card">
+              <p class="dash-period-label">Coût matière jour</p>
+              <p class="dash-period-value" id="dpTodayCost">—</p>
+              <p class="dash-period-sub" id="dpTodayCostSub">Food cost jour : —</p>
+            </div>
+            <!-- Charges du jour -->
+            <div class="dash-period-card">
+              <p class="dash-period-label">Charges du jour *</p>
+              <p class="dash-period-value" id="dpTodayCharges">—</p>
+              <p class="dash-period-sub" style="font-size:10px;">* charges fixes mois ÷ jours ouvrés</p>
+            </div>
+          </div>
+          <p style="font-size:11px;color:var(--text-muted);margin-top:8px;padding:0 4px;">
+            <i class="fas fa-info-circle"></i>
+            Le coût matière journalier est estimé proportionnellement au CA du jour vs CA du mois.
+            Les charges fixes sont réparties sur <span id="dpWorkDays">—</span> jours ouvrés.
+          </p>
+        </div>
+        <!-- ══ FIN ONGLETS DASHBOARD ══════════════════════════════ -->
+
+        <!-- ══ NOUVEAU BLOC TITRE INTÉGRÉ ════════════════════════ -->
+        <div id="dash-title-block" class="dash-title-block">
+
+          <!-- Ligne 1 : Titre gauche + Résultat net droit -->
+          <div class="dtb-row1">
+            <div class="dtb-left">
+              <span class="dtb-app-name">MariaManager</span>
+              <span class="dtb-sep-v" aria-hidden="true"></span>
+              <span class="dtb-subtitle">Pilotage de rentabilité</span>
+            </div>
+            <div class="dtb-right">
+              <span class="dtb-result-amount" id="dtbResultAmount">—</span>
+            </div>
+          </div>
+
+          <!-- Ligne 2 : Badge statut gauche + Message court droit -->
+          <div class="dtb-row2">
+            <div class="dtb-left">
+              <span class="dtb-status-badge" id="dtbStatusBadge">
+                <span id="dtbStatusText">⏳ Chargement…</span>
+              </span>
+            </div>
+            <div class="dtb-right">
+              <span class="dtb-short-msg" id="dtbShortMsg"></span>
+            </div>
+          </div>
+
+          <!-- Séparateur -->
+          <div class="dtb-separator"></div>
+
+          <!-- Ligne 3 : 4 KPI Rentabilité compacts -->
+          <div class="dtb-kpi-row" id="dtbKpiRow">
+
+            <div class="dtb-kpi-card">
+              <p class="dtb-kpi-label">CA du mois</p>
+              <p class="dtb-kpi-value neutral" id="dtbKpiCA">—</p>
+            </div>
+
+            <div class="dtb-kpi-card">
+              <p class="dtb-kpi-label">Coût matière réel</p>
+              <p class="dtb-kpi-value neutral" id="dtbKpiCout">—</p>
+            </div>
+
+            <div class="dtb-kpi-card">
+              <p class="dtb-kpi-label">Marge brute %</p>
+              <p class="dtb-kpi-value neutral" id="dtbKpiMarge">—</p>
+            </div>
+
+            <div class="dtb-kpi-card">
+              <p class="dtb-kpi-label">Point mort atteint</p>
+              <p class="dtb-kpi-value neutral" id="dtbKpiPM">—</p>
+            </div>
+
+          </div>
+
+        </div>
+        <!-- ══ FIN BLOC TITRE INTÉGRÉ ═════════════════════════════ -->
+
+        <!-- Charts Row -->
+        <div class="charts-grid">
+          <div class="card chart-card">
+            <div class="card-header">
+              <h3><i class="fas fa-chart-bar"></i> CA des 7 derniers jours</h3>
+            </div>
+            <div class="card-body" style="height: 280px;">
+              <canvas id="revenueChart"></canvas>
+            </div>
+          </div>
+          <div class="card chart-card">
+            <div class="card-header">
+              <h3><i class="fas fa-chart-pie"></i> Ventes par catégorie</h3>
+            </div>
+            <div class="card-body" style="height: 280px;">
+              <canvas id="categoryChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-bolt"></i> Actions rapides</h3>
+          </div>
+          <div class="card-body">
+            <div class="quick-actions">
+              <button class="quick-action-btn" onclick="navigateTo('revenue'); setTimeout(()=>document.getElementById('addRevenueBtn').click(),300)">
+                <i class="fas fa-plus-circle"></i>
+                <span>Saisir CA du jour</span>
+              </button>
+              <button class="quick-action-btn" onclick="navigateTo('sales'); setTimeout(()=>document.getElementById('addSaleBtn').click(),300)">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Saisir une vente</span>
+              </button>
+              <button class="quick-action-btn" onclick="navigateTo('recipes'); setTimeout(()=>document.getElementById('addRecipeBtn').click(),300)">
+                <i class="fas fa-plus"></i>
+                <span>Ajouter une recette</span>
+              </button>
+              <button class="quick-action-btn" onclick="navigateTo('inventaires')">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Faire l'inventaire</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard card inventaire (visible si ≥2 inventaires validés) -->
+        <div class="card" id="dashInventaireCard" style="display:none;">
+          <div class="card-header">
+            <h3><i class="fas fa-clipboard-list"></i> Dernière analyse terrain</h3>
+            <button class="btn btn-sm btn-secondary" onclick="navigateTo('inventaires'); setTimeout(()=>Inventaire.showAnalyse(),400)">
+              <i class="fas fa-chart-bar"></i> Voir l'analyse
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="inv-dash-grid">
+              <div class="inv-dash-kpi">
+                <p class="inv-dash-label">Période analysée</p>
+                <p class="inv-dash-value" id="dashInvPeriod">—</p>
+              </div>
+              <div class="inv-dash-kpi">
+                <p class="inv-dash-label">Perte totale</p>
+                <p class="inv-dash-value inv-loss" id="dashInvLoss">—</p>
+              </div>
+              <div class="inv-dash-kpi">
+                <p class="inv-dash-label">Écart global</p>
+                <p class="inv-dash-value" id="dashInvGap">—</p>
+              </div>
+            </div>
+            <div class="inv-dash-top" id="dashInvTop3">
+              <!-- Top 3 injectés par JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard card rentabilité -->
+        <div class="card" id="dashRentaCard" style="display:none;">
+          <div class="card-header">
+            <h3><i class="fas fa-balance-scale"></i> Rentabilité du mois</h3>
+            <button class="btn btn-sm btn-secondary" onclick="navigateTo('rentabilite')">
+              <i class="fas fa-arrow-right"></i> Voir le détail
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="renta-dash-grid">
+              <div class="renta-dash-month" id="dashRentaMonth">—</div>
+              <div class="renta-dash-result" id="dashRentaResult">—</div>
+            </div>
+            <div class="renta-progress-track" style="margin:12px 0 8px; height:10px;">
+              <div class="renta-progress-fill" id="dashRentaProgressFill"></div>
+            </div>
+            <p class="renta-dash-msg" id="dashRentaMsg">—</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========== RECIPES PAGE ========== -->
+      <section class="page" id="page-recipes">
+        <div class="page-header-actions">
+          <div>
+            <h2>Recettes & Menu</h2>
+            <p class="text-muted">Gérez votre carte et les correspondances Zelty</p>
+            <p class="shared-data-note"><i class="fas fa-share-alt"></i> Les recettes sont partagées entre tous vos restaurants</p>
+          </div>
+          <button class="btn btn-primary" id="addRecipeBtn">
+            <i class="fas fa-plus"></i> Nouvelle recette
+          </button>
+        </div>
+
+        <!-- Search & filters -->
+        <div class="filters-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="recipeSearch" placeholder="Rechercher une recette..." />
+          </div>
+          <div class="filter-tabs" id="recipeFilterTabs">
+            <button class="filter-tab active" data-filter="all">Tous</button>
+            <button class="filter-tab" data-filter="entrée">Entrées</button>
+            <button class="filter-tab" data-filter="plat">Plats</button>
+            <button class="filter-tab" data-filter="dessert">Desserts</button>
+            <button class="filter-tab" data-filter="boisson">Boissons</button>
+          </div>
+        </div>
+
+        <!-- Zelty mapping info -->
+        <div class="info-banner zelty-banner" id="zeltyRecipeBanner">
+          <i class="fas fa-info-circle"></i>
+          <span>Renseignez les <strong>ID produit Zelty</strong> sur chaque recette pour activer la synchronisation automatique des ventes.</span>
+        </div>
+
+        <div class="recipes-grid" id="recipesGrid">
+          <!-- Cards injected by JS -->
+        </div>
+      </section>
+
+      <!-- ========== SALES PAGE ========== -->
+      <section class="page" id="page-sales">
+        <div class="page-header-actions">
+          <div>
+            <h2>Ventes</h2>
+            <p class="text-muted">Saisie manuelle ou synchronisée avec Zelty</p>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" id="syncSalesBtn">
+              <i class="fas fa-sync-alt"></i> Synchroniser Zelty
+            </button>
+            <button class="btn btn-primary" id="addSaleBtn">
+              <i class="fas fa-plus"></i> Nouvelle vente
+            </button>
+          </div>
+        </div>
+
+        <!-- Sales summary -->
+        <div class="sales-summary" id="salesSummary">
+          <div class="summary-item">
+            <p class="summary-label">Total ventes</p>
+            <p class="summary-value" id="salesTotalCount">0</p>
+          </div>
+          <div class="summary-item">
+            <p class="summary-label">CA total</p>
+            <p class="summary-value" id="salesTotalRevenue">0,00 €</p>
+          </div>
+          <div class="summary-item">
+            <p class="summary-label">Ventes manuelles</p>
+            <p class="summary-value" id="salesManualCount">0</p>
+          </div>
+          <div class="summary-item">
+            <p class="summary-label">Ventes Zelty</p>
+            <p class="summary-value" id="salesZeltyCount">0</p>
+          </div>
+        </div>
+
+        <!-- Sales filter -->
+        <div class="filters-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="saleSearch" placeholder="Rechercher une vente..." />
+          </div>
+          <select class="select-filter" id="saleSourceFilter">
+            <option value="all">Toutes les sources</option>
+            <option value="manual">Manuel uniquement</option>
+            <option value="zelty">Zelty uniquement</option>
+          </select>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table" id="salesTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Produit</th>
+                <th>Qté</th>
+                <th>Prix unit.</th>
+                <th>Total</th>
+                <th>Source</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="salesTableBody">
+              <!-- rows injected -->
+            </tbody>
+          </table>
+          <div class="empty-state" id="salesEmpty" style="display:none;">
+            <i class="fas fa-receipt"></i>
+            <p>Aucune vente enregistrée</p>
+            <button class="btn btn-primary" onclick="document.getElementById('addSaleBtn').click()">Saisir une vente</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== REVENUE PAGE ========== -->
+      <section class="page" id="page-revenue">
+        <div class="page-header-actions">
+          <div>
+            <h2>Chiffre d'affaires</h2>
+            <p class="text-muted">Saisie et suivi du CA quotidien</p>
+          </div>
+          <button class="btn btn-primary" id="addRevenueBtn">
+            <i class="fas fa-plus"></i> Saisir le CA
+          </button>
+        </div>
+
+        <!-- Monthly KPIs -->
+        <div class="kpi-grid kpi-small">
+          <div class="kpi-card">
+            <div class="kpi-icon small"><i class="fas fa-calendar-alt"></i></div>
+            <div class="kpi-info">
+              <p class="kpi-label">CA ce mois</p>
+              <p class="kpi-value" id="kpiMonthRevenue">—</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small"><i class="fas fa-chart-line"></i></div>
+            <div class="kpi-info">
+              <p class="kpi-label">Moyenne/jour</p>
+              <p class="kpi-value" id="kpiAvgRevenue">—</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small"><i class="fas fa-arrow-up"></i></div>
+            <div class="kpi-info">
+              <p class="kpi-label">Meilleur jour</p>
+              <p class="kpi-value" id="kpiBestDay">—</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small"><i class="fas fa-users"></i></div>
+            <div class="kpi-info">
+              <p class="kpi-label">Total couverts</p>
+              <p class="kpi-value" id="kpiTotalCovers">—</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Revenue chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-chart-area"></i> Évolution du CA</h3>
+          </div>
+          <div class="card-body" style="height: 300px;">
+            <canvas id="revenueDetailChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Revenue table -->
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-table"></i> Historique du CA</h3>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-wrapper">
+              <table class="data-table" id="revenueTable">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Chiffre d'affaires</th>
+                    <th>Couverts</th>
+                    <th>Ticket moyen</th>
+                    <th>Source</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="revenueTableBody"></tbody>
+              </table>
+              <div class="empty-state" id="revenueEmpty" style="display:none;">
+                <i class="fas fa-chart-line"></i>
+                <p>Aucun CA saisi pour le moment</p>
+                <button class="btn btn-primary" onclick="document.getElementById('addRevenueBtn').click()">Saisir le CA du jour</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== FACTURES PAGE ========== -->
+      <section class="page" id="page-factures">
+        <div class="page-header-actions">
+          <div>
+            <h2>Factures fournisseurs</h2>
+            <p class="text-muted">Importez vos factures → mise à jour automatique de la mercuriale</p>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" id="importInvoiceBtn">
+              <i class="fas fa-keyboard"></i> Saisir manuellement
+            </button>
+            <button class="btn btn-primary" id="ocrInvoiceBtn">
+              <i class="fas fa-magic"></i> Analyser un PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Flux logique banner -->
+        <div class="flux-banner">
+          <div class="flux-step active-step"><i class="fas fa-file-invoice"></i><span>Facture</span></div>
+          <div class="flux-arrow"><i class="fas fa-chevron-right"></i></div>
+          <div class="flux-step"><i class="fas fa-tags"></i><span>Mercuriale</span></div>
+          <div class="flux-arrow"><i class="fas fa-chevron-right"></i></div>
+          <div class="flux-step"><i class="fas fa-book-open"></i><span>Recettes</span></div>
+          <div class="flux-arrow"><i class="fas fa-chevron-right"></i></div>
+          <div class="flux-step"><i class="fas fa-cash-register"></i><span>Ventes</span></div>
+          <div class="flux-arrow"><i class="fas fa-chevron-right"></i></div>
+          <div class="flux-step"><i class="fas fa-balance-scale"></i><span>Rentabilité</span></div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid kpi-small">
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#eff6ff;color:#2563eb"><i class="fas fa-file-invoice"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Factures importées</p><p class="kpi-value" id="kpiInvoicesTotal">—</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#fef3c7;color:#d97706"><i class="fas fa-clock"></i></div>
+            <div class="kpi-info"><p class="kpi-label">En attente validation</p><p class="kpi-value" id="kpiInvoicesPending">—</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#fee2e2;color:#dc2626"><i class="fas fa-euro-sign"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Total achats ce mois</p><p class="kpi-value" id="kpiInvoicesMonth">—</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#f0fdf4;color:#16a34a"><i class="fas fa-check-circle"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Produits mis à jour</p><p class="kpi-value" id="kpiProductsUpdated">—</p></div>
+          </div>
+        </div>
+
+        <!-- Pending invoices alert -->
+        <div id="pendingInvoicesAlert" style="display:none;" class="info-banner" style="background:#fef3c7;border-color:#fcd34d;color:#78350f;">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="pendingInvoicesText">Des factures attendent votre validation.</span>
+          <button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="Factures.showPending()">Voir</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="invoiceSearch" placeholder="Rechercher une facture..." />
+          </div>
+          <select class="select-filter" id="invoiceStatusFilter">
+            <option value="all">Tous statuts</option>
+            <option value="pending">En attente</option>
+            <option value="validated">Validée</option>
+            <option value="imported">Importée</option>
+          </select>
+          <select class="select-filter" id="invoiceSupplierFilter">
+            <option value="all">Tous fournisseurs</option>
+          </select>
+        </div>
+
+        <!-- Invoices list -->
+        <div id="invoicesList"></div>
+        <div class="empty-state" id="invoicesEmpty" style="display:none;">
+          <i class="fas fa-file-invoice"></i>
+          <p>Aucune facture importée</p>
+          <p class="text-muted text-sm">Importez une facture PDF pour alimenter automatiquement votre mercuriale</p>
+          <button class="btn btn-primary" onclick="document.getElementById('importInvoiceBtn').click()">
+            <i class="fas fa-file-upload"></i> Importer une facture
+          </button>
+        </div>
+
+        <!-- ══ PANNEAU OCR PDF ═══════════════════════════════════════ -->
+        <div id="ocr-panel" class="ocr-panel" style="display:none;">
+
+          <!-- En-tête panneau -->
+          <div class="ocr-panel-header">
+            <div>
+              <h3><i class="fas fa-magic"></i> Analyse de facture PDF</h3>
+              <p class="text-muted" style="font-size:13px;margin-top:2px;">PDF.js → Google Cloud Vision API (DOCUMENT_TEXT_DETECTION)</p>
+            </div>
+            <button class="icon-btn" id="ocrCloseBtn" title="Fermer"><i class="fas fa-times"></i></button>
+          </div>
+
+          <!-- Flux étapes -->
+          <div class="ocr-steps" id="ocrStepsBar">
+            <div class="ocr-step active" id="ocrStep1Ind"><span class="ocr-step-num">1</span><span class="ocr-step-lbl">Import PDF</span></div>
+            <div class="ocr-step-arrow"><i class="fas fa-chevron-right"></i></div>
+            <div class="ocr-step" id="ocrStep2Ind"><span class="ocr-step-num">2</span><span class="ocr-step-lbl">Analyse IA</span></div>
+            <div class="ocr-step-arrow"><i class="fas fa-chevron-right"></i></div>
+            <div class="ocr-step" id="ocrStep3Ind"><span class="ocr-step-num">3</span><span class="ocr-step-lbl">Validation</span></div>
+          </div>
+
+          <!-- ── ÉTAPE 1 : Import ── -->
+          <div id="ocrPhase1">
+
+            <!-- Zone de dépôt PDF -->
+            <div class="ocr-drop-zone" id="ocrDropZone">
+              <input type="file" id="ocrFileInput" accept=".pdf" style="display:none;" />
+              <div id="ocrDropContent">
+                <i class="fas fa-file-pdf ocr-drop-icon"></i>
+                <p class="ocr-drop-title">Déposez votre facture PDF ici</p>
+                <p class="ocr-drop-sub">ou cliquez pour choisir un fichier</p>
+                <p class="ocr-drop-hint">PDF uniquement · 10 Mo max</p>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('ocrFileInput').click()">
+                  <i class="fas fa-folder-open"></i> Parcourir
+                </button>
+              </div>
+            </div>
+
+            <!-- Fournisseur + Date -->
+            <div class="ocr-form-row">
+              <div class="form-group" style="flex:2;">
+                <label class="form-label">Fournisseur concerné *</label>
+                <select id="ocrSupplierId" class="form-control">
+                  <option value="">-- Sélectionner un fournisseur --</option>
+                </select>
+                <a href="#" class="ocr-add-supplier-link" id="ocrAddSupplierLink">
+                  <i class="fas fa-plus-circle"></i> Ce fournisseur n'existe pas encore ? L'ajouter
+                </a>
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label class="form-label">Date de la facture *</label>
+                <input type="date" id="ocrInvoiceDate" class="form-control" />
+              </div>
+            </div>
+
+            <!-- Avertissement clé API -->
+            <div class="ocr-api-warning" id="ocrApiWarning" style="display:none;">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>Aucune clé Google Cloud Vision configurée — <strong>mode démo actif</strong> (données simulées).
+                <a href="#" onclick="navigateTo('settings');return false;">Configurer dans Paramètres →</a>
+              </span>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:center;margin-top:16px;">
+              <button class="btn btn-primary" id="ocrAnalyzeBtn" disabled>
+                <i class="fas fa-magic"></i> Analyser la facture
+              </button>
+              <button class="btn btn-secondary" id="ocrCancelBtn">Annuler</button>
+            </div>
+          </div>
+
+          <!-- ── ÉTAPE 2 : Chargement ── -->
+          <div id="ocrPhase2" style="display:none;">
+            <div class="ocr-loading">
+              <div class="ocr-spinner"><i class="fas fa-circle-notch fa-spin"></i></div>
+              <p class="ocr-loading-title" id="ocrLoadingTitle">Analyse en cours…</p>
+              <p class="ocr-loading-sub">Rendu PDF → images → Google Cloud Vision</p>
+              <!-- Barre de progression -->
+              <div class="ocr-progress-track" style="margin:14px 0 6px;background:#F5C6C2;border-radius:4px;height:6px;width:100%;max-width:320px;overflow:hidden;">
+                <div id="ocrProgressBar" style="height:100%;width:0%;background:#C0392B;border-radius:4px;transition:width .4s ease;"></div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="ocrAbortBtn" style="margin-top:16px;">
+                <i class="fas fa-times"></i> Annuler l'analyse
+              </button>
+            </div>
+          </div>
+
+          <!-- ── ÉTAPE 3 : Résultats & validation ── -->
+          <div id="ocrPhase3" style="display:none;">
+
+            <!-- Bandeau récap OCR -->
+            <div class="ocr-result-banner" id="ocrResultBanner"></div>
+
+            <!-- Avertissement scan -->
+            <div class="ocr-warn-banner" id="ocrScanWarning" style="display:none;">
+              <i class="fas fa-exclamation-triangle"></i>
+              Ce PDF semble être une image scannée. La qualité d'analyse peut être réduite. Vérifiez attentivement les résultats.
+            </div>
+
+            <!-- Avertissement aucune ligne -->
+            <div class="ocr-info-banner" id="ocrNoLinesWarning" style="display:none;">
+              <i class="fas fa-info-circle"></i>
+              Aucune ligne produit détectée automatiquement. Vous pouvez saisir les lignes manuellement ci-dessous.
+            </div>
+
+            <!-- Tableau des lignes -->
+            <div class="table-wrapper" style="margin-top:12px;">
+              <table class="data-table ocr-lines-table">
+                <thead>
+                  <tr>
+                    <th style="width:36px;">St.</th>
+                    <th>Produit</th>
+                    <th style="width:80px;">Qté</th>
+                    <th style="width:100px;">Unité</th>
+                    <th style="width:100px;">Prix unit.</th>
+                    <th style="width:90px;">Total</th>
+                    <th style="width:160px;">Produit lié</th>
+                    <th style="width:40px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="ocrLinesBody"></tbody>
+              </table>
+            </div>
+
+            <!-- Pied tableau -->
+            <div class="ocr-table-footer">
+              <button class="btn btn-secondary btn-sm" id="ocrAddLineBtn">
+                <i class="fas fa-plus"></i> Ajouter une ligne manuellement
+              </button>
+              <div class="ocr-totals">
+                <span class="ocr-total-calc">Total calculé : <strong id="ocrTotalCalc">0,00 €</strong></span>
+                <span class="ocr-total-pdf" id="ocrTotalPdfWrap" style="display:none;">
+                  Total PDF : <strong id="ocrTotalPdf">—</strong>
+                </span>
+                <span class="ocr-total-gap" id="ocrTotalGapWrap" style="display:none;">
+                  <i class="fas fa-exclamation-triangle"></i> Écart : <strong id="ocrTotalGap"></strong>
+                </span>
+              </div>
+            </div>
+
+            <!-- Actions validation -->
+            <div class="ocr-validate-bar">
+              <div class="ocr-validate-info" id="ocrValidateInfo"></div>
+              <div style="display:flex;gap:12px;">
+                <button class="btn btn-secondary" id="ocrBackBtn">
+                  <i class="fas fa-arrow-left"></i> Recommencer
+                </button>
+                <button class="btn btn-primary ocr-validate-btn" id="ocrValidateBtn" style="min-width:200px;">
+                  <i class="fas fa-check"></i> Valider la facture
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── ÉTAPE 4 : Succès ── -->
+          <div id="ocrPhase4" style="display:none;">
+            <div class="ocr-success">
+              <div class="ocr-success-icon">✅</div>
+              <p class="ocr-success-title" id="ocrSuccessTitle">Facture enregistrée</p>
+              <p class="ocr-success-sub" id="ocrSuccessSub"></p>
+              <div class="btn-group" style="justify-content:center;margin-top:20px;">
+                <button class="btn btn-secondary" id="ocrNewBtn">
+                  <i class="fas fa-plus"></i> Analyser une autre facture
+                </button>
+                <button class="btn btn-primary" id="ocrViewInvoiceBtn">
+                  <i class="fas fa-eye"></i> Voir la facture
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <!-- ══ FIN PANNEAU OCR ═══════════════════════════════════════ -->
+
+      </section>
+
+      <!-- ========== SETTINGS PAGE ========== -->
+      <section class="page" id="page-settings">
+        <div class="page-header">
+          <h2>Paramètres</h2>
+          <p class="text-muted">Configuration de votre application et connexion Zelty</p>
+        </div>
+
+        <div class="settings-grid">
+
+          <!-- Zelty API Card -->
+          <div class="card settings-card zelty-settings">
+            <div class="card-header">
+              <h3><i class="fas fa-plug"></i> Connexion API Zelty</h3>
+              <span class="badge badge-manual" id="apiStatusBadge">Non testée</span>
+            </div>
+            <div class="card-body">
+              <div class="zelty-logo-area">
+                <div class="zelty-icon"><i class="fas fa-cash-register"></i></div>
+                <div>
+                  <p class="zelty-title">Zelty — Caisse connectée</p>
+                  <p class="text-muted text-sm">Synchronisez automatiquement vos ventes depuis votre caisse Zelty</p>
+                </div>
+              </div>
+
+              <div class="info-box" style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 20px; border-radius: 6px;">
+                <p style="margin: 0; color: #1e40af; font-size: 14px; line-height: 1.6;">
+                  <i class="fas fa-shield-alt" style="color: #3b82f6; margin-right: 8px;"></i>
+                  <strong>Clé API sécurisée côté serveur.</strong><br>
+                  <span style="color: #64748b; font-size: 13px;">
+                    La clé enseigne Zelty est configurée dans les variables d'environnement (Vercel). Aucune configuration requise dans le navigateur.
+                  </span>
+                </p>
+              </div>
+
+              <button class="btn btn-primary" id="verifyZeltyConnectionBtn" style="width: 100%; margin-bottom: 16px;">
+                <i class="fas fa-wifi"></i> Vérifier la connexion Zelty
+              </button>
+
+              <!-- Connection test result -->
+              <div class="connection-result" id="connectionResult" style="display:none;"></div>
+            </div>
+          </div>
+
+          <!-- Restaurant Info Card -->
+          <div class="card settings-card">
+            <div class="card-header">
+              <h3><i class="fas fa-store-alt"></i> Informations restaurant</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Nom du restaurant</label>
+                <input type="text" id="settingRestaurantName" class="form-control" placeholder="Mon Restaurant" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Adresse</label>
+                <input type="text" id="settingAddress" class="form-control" placeholder="12 rue des Chefs, 75001 Paris" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Devise</label>
+                <select class="form-control" id="settingCurrency">
+                  <option value="EUR">EUR — Euro (€)</option>
+                  <option value="CHF">CHF — Franc suisse (CHF)</option>
+                  <option value="GBP">GBP — Livre sterling (£)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nombre de couverts max</label>
+                <input type="number" id="settingMaxCovers" class="form-control" placeholder="50" />
+              </div>
+              <button class="btn btn-primary" id="saveRestaurantBtn">
+                <i class="fas fa-save"></i> Enregistrer
+              </button>
+            </div>
+          </div>
+
+          <!-- Sync Settings -->
+          <div class="card settings-card">
+            <div class="card-header">
+              <h3><i class="fas fa-sync"></i> Synchronisation</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Fréquence de sync automatique</label>
+                <select class="form-control" id="settingSyncFreq">
+                  <option value="manual">Manuel uniquement</option>
+                  <option value="15">Toutes les 15 minutes</option>
+                  <option value="30">Toutes les 30 minutes</option>
+                  <option value="60">Toutes les heures</option>
+                </select>
+              </div>
+              <div class="toggle-setting">
+                <div>
+                  <p class="setting-name">Synchronisation auto au démarrage</p>
+                  <p class="text-muted text-sm">Synchroniser dès l'ouverture de l'app</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settingSyncOnStart" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-setting">
+                <div>
+                  <p class="setting-name">Notifications de sync</p>
+                  <p class="text-muted text-sm">Alertes en cas d'erreur de connexion</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settingSyncNotif" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <button class="btn btn-secondary" id="saveSyncSettingsBtn">
+                <i class="fas fa-save"></i> Enregistrer
+              </button>
+            </div>
+          </div>
+
+          <!-- Google Cloud Vision — OCR Factures -->
+          <div class="card settings-card">
+            <div class="card-header">
+              <h3><i class="fas fa-eye"></i> Analyse OCR — Factures PDF</h3>
+              <span class="badge badge-manual" id="gcvStatusBadge">Non configurée</span>
+            </div>
+            <div class="card-body">
+              <p class="text-muted text-sm" style="margin-bottom:16px;">
+                Utilisez <strong>Google Cloud Vision API</strong> pour extraire automatiquement
+                les lignes produits de vos factures PDF.<br><br>
+                <strong>Fonctionnement :</strong> le PDF est rendu page par page en image (via PDF.js),
+                puis chaque image est envoyée à l'endpoint
+                <code style="font-size:11px;background:#F5F5F5;padding:1px 4px;border-radius:3px;">images:annotate</code>
+                avec la feature <code style="font-size:11px;background:#F5F5F5;padding:1px 4px;border-radius:3px;">DOCUMENT_TEXT_DETECTION</code>.<br><br>
+                Clé disponible sur
+                <a href="https://console.cloud.google.com/apis/library/vision.googleapis.com"
+                   target="_blank" rel="noopener">Google Cloud Console</a>
+                → activer «&nbsp;Cloud Vision API&nbsp;» → Identifiants → Clé API.
+              </p>
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="fas fa-key"></i> Clé API Google Cloud Vision
+                  <span class="security-badge"><i class="fas fa-shield-alt"></i> Stockée localement</span>
+                </label>
+                <form autocomplete="off" onsubmit="return false;" style="display:contents;">
+                  <input type="text" name="username_gcv" style="display:none;" aria-hidden="true" />
+                  <div class="password-field">
+                    <input type="password" id="gcvApiKey" class="form-control"
+                           placeholder="AIza..." autocomplete="new-password" />
+                    <button type="button" class="toggle-password" id="toggleGcvKey" title="Afficher/masquer">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </form>
+                <p class="field-hint">
+                  <i class="fas fa-info-circle"></i>
+                  Format : AIza… — Variable d'environnement : <code>GOOGLE_CLOUD_VISION_API_KEY</code>
+                </p>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-outline" id="testGcvKeyBtn">
+                  <i class="fas fa-wifi"></i> Tester la connexion
+                </button>
+                <button class="btn btn-primary" id="saveGcvKeyBtn">
+                  <i class="fas fa-save"></i> Enregistrer
+                </button>
+              </div>
+              <div class="connection-result" id="gcvTestResult" style="display:none;margin-top:12px;"></div>
+            </div>
+          </div>
+
+          <!-- Data management -->
+          <div class="card settings-card">
+            <div class="card-header">
+              <h3><i class="fas fa-database"></i> Données</h3>
+            </div>
+            <div class="card-body">
+              <p class="text-muted text-sm">Gérez vos données locales et exportez-les.</p>
+              <div class="data-actions">
+                <button class="btn btn-outline" id="exportDataBtn">
+                  <i class="fas fa-download"></i> Exporter (JSON)
+                </button>
+                <button class="btn btn-outline btn-danger" id="clearDataBtn">
+                  <i class="fas fa-trash"></i> Réinitialiser
+                </button>
+              </div>
+              <div class="data-info" id="dataInfo">
+                <p><i class="fas fa-database"></i> Chargement...</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========== MERCURIALE PAGE ========== -->
+      <section class="page" id="page-mercuriale">
+        <div class="page-header-actions">
+          <div>
+            <h2>Mercuriale</h2>
+            <p class="text-muted">Prix fournisseurs — Quel est mon meilleur prix par produit ?</p>
+            <p class="shared-data-note"><i class="fas fa-share-alt"></i> Les prix produits sont partagés entre tous vos restaurants</p>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" id="addSupplierBtn"><i class="fas fa-truck"></i> Nouveau fournisseur</button>
+            <button class="btn btn-primary" id="addSupplierProductBtn"><i class="fas fa-plus"></i> Ajouter un prix</button>
+          </div>
+        </div>
+
+        <!-- KPIs mercuriale -->
+        <div class="kpi-grid kpi-small" id="mercurialeKpis">
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#f0fdf4;color:#16a34a"><i class="fas fa-truck"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Fournisseurs actifs</p><p class="kpi-value" id="kpiSuppliers">—</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#eff6ff;color:#2563eb"><i class="fas fa-tags"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Produits suivis</p><p class="kpi-value" id="kpiProducts">—</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#fef3c7;color:#d97706"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Prix mis à jour ce mois</p><p class="kpi-value" id="kpiPricesUpdated">—</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#fff7ed;color:#f97316"><i class="fas fa-trophy"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Produits multi-fournis.</p><p class="kpi-value" id="kpiMultiSupplier">—</p></div>
+          </div>
+        </div>
+
+        <!-- Tabs : par fournisseur / par produit / comparaison -->
+        <div class="merc-tabs">
+          <button class="merc-tab active" data-tab="by-supplier">Par fournisseur</button>
+          <button class="merc-tab" data-tab="by-product">Par produit</button>
+          <button class="merc-tab" data-tab="best-price">Meilleurs prix</button>
+          <button class="merc-tab" data-tab="history">Historique</button>
+        </div>
+
+        <!-- By supplier -->
+        <div class="merc-panel active" id="tab-by-supplier">
+          <div class="filters-bar">
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input type="text" id="supplierSearch" placeholder="Rechercher un fournisseur..." />
+            </div>
+            <select class="select-filter" id="supplierCatFilter">
+              <option value="all">Toutes catégories</option>
+              <option value="viande">Viande</option>
+              <option value="BOF">BOF</option>
+              <option value="épicerie">Épicerie</option>
+              <option value="légumes">Légumes</option>
+              <option value="boisson">Boisson</option>
+              <option value="poisson">Poisson</option>
+              <option value="autres">Autres</option>
+            </select>
+          </div>
+          <div id="suppliersList"></div>
+        </div>
+
+        <!-- By product -->
+        <div class="merc-panel" id="tab-by-product">
+          <div class="filters-bar">
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input type="text" id="productSearch" placeholder="Rechercher un produit..." />
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table" id="productsTable">
+              <thead>
+                <tr><th>Produit</th><th>Fournisseur</th><th>Catégorie</th><th>Prix actuel</th><th>Unité</th><th>Màj</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="productsTableBody"></tbody>
+            </table>
+            <div class="empty-state" id="productsEmpty" style="display:none;">
+              <i class="fas fa-tags"></i><p>Aucun produit renseigné</p>
+              <button class="btn btn-primary" onclick="document.getElementById('addSupplierProductBtn').click()">Ajouter un produit</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Best price -->
+        <div class="merc-panel" id="tab-best-price">
+          <div class="info-banner" style="background:#f0fdf4;border-color:#86efac;color:#14532d;">
+            <i class="fas fa-trophy"></i>
+            <span>Pour chaque produit référencé chez plusieurs fournisseurs, voici le <strong>meilleur prix disponible</strong>.</span>
+          </div>
+          <div id="bestPriceGrid"></div>
+        </div>
+
+        <!-- Price history -->
+        <div class="merc-panel" id="tab-history">
+          <div class="filters-bar">
+            <select class="select-filter" id="historyProductFilter" style="min-width:220px;">
+              <option value="all">Tous les produits</option>
+            </select>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr><th>Date</th><th>Produit</th><th>Fournisseur</th><th>Prix</th><th>Unité</th><th>Notes</th></tr>
+              </thead>
+              <tbody id="priceHistoryBody"></tbody>
+            </table>
+            <div class="empty-state" id="historyEmpty" style="display:none;">
+              <i class="fas fa-history"></i><p>Aucun historique de prix</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== PARETO PAGE ========== -->
+      <section class="page" id="page-pareto">
+        <div class="page-header">
+          <h2>Analyse achats — Pareto</h2>
+          <p class="text-muted">Quels produits représentent 80% de mes achats ?</p>
+        </div>
+
+        <!-- Pareto KPIs -->
+        <div class="kpi-grid kpi-small">
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#fee2e2;color:#dc2626"><i class="fas fa-fire"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Produits Top 20%</p><p class="kpi-value" id="kpiPareto20">—</p><p class="kpi-sub">Priorité négociation</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#eff6ff;color:#2563eb"><i class="fas fa-shopping-basket"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Coût total achats</p><p class="kpi-value" id="kpiTotalPurchase">—</p><p class="kpi-sub">Sur la période</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#f0fdf4;color:#16a34a"><i class="fas fa-percent"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Food cost moyen</p><p class="kpi-value" id="kpiFoodCost">—</p><p class="kpi-sub">Sur les ventes</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon small" style="background:#fdf4ff;color:#9333ea"><i class="fas fa-handshake"></i></div>
+            <div class="kpi-info"><p class="kpi-label">Potentiel économies</p><p class="kpi-value" id="kpiSavingsPotential">—</p><p class="kpi-sub">Si -5% sur Top 20%</p></div>
+          </div>
+        </div>
+
+        <!-- Pareto chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-chart-bar"></i> Répartition des achats par produit</h3>
+            <span class="badge" style="background:#fee2e2;color:#dc2626;font-size:12px;">Loi de Pareto 80/20</span>
+          </div>
+          <div class="card-body" style="height:320px;">
+            <canvas id="paretoChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Pareto insight banner -->
+        <div class="pareto-insight" id="paretoInsight"></div>
+
+        <!-- Pareto table -->
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-list-ol"></i> Détail par produit</h3>
+            <div class="btn-group">
+              <button class="btn btn-secondary btn-sm" id="paretoRefreshBtn"><i class="fas fa-sync-alt"></i> Recalculer</button>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-wrapper">
+              <table class="data-table" id="paretoTable">
+                <thead>
+                  <tr><th>#</th><th>Produit</th><th>Fournisseur</th><th>Volume utilisé</th><th>Coût total</th><th>% achats</th><th>Cumul</th><th>Priorité</th></tr>
+                </thead>
+                <tbody id="paretoTableBody"></tbody>
+              </table>
+              <div class="empty-state" id="paretoEmpty" style="display:none;">
+                <i class="fas fa-chart-bar"></i>
+                <p>Pas assez de données pour le calcul Pareto</p>
+                <p class="text-muted text-sm">Saisissez des ventes et renseignez les coûts dans vos recettes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== RENTABILITE PAGE ========== -->
+      <section class="page" id="page-rentabilite">
+
+        <!-- SOUS-PAGE : VUE PRINCIPALE -->
+        <div id="rentaSubMain">
+          <div class="page-header-actions">
+            <div>
+              <h2>Rentabilité réelle</h2>
+              <p class="text-muted">Basée sur les inventaires, les factures et le CA réel</p>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-secondary" id="rentaGoChargesBtn">
+                <i class="fas fa-list"></i> Gérer les charges
+              </button>
+            </div>
+          </div>
+
+          <!-- Sélecteur de mois -->
+          <div class="renta-month-bar card">
+            <div class="card-body" style="padding:14px 20px;">
+              <div class="renta-month-row">
+                <button class="btn btn-ghost" id="rentaPrevMonth"><i class="fas fa-chevron-left"></i></button>
+                <h3 class="renta-month-label" id="rentaMonthLabel">—</h3>
+                <button class="btn btn-ghost" id="rentaNextMonth"><i class="fas fa-chevron-right"></i></button>
+                <span class="badge" id="rentaCurrentMonthBadge" style="display:none; background:var(--primary-light); color:var(--primary-dark);">Mois en cours</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOC 1 : Le verdict -->
+          <div class="renta-verdict-card" id="rentaVerdictCard">
+            <div class="renta-verdict-skeleton" id="rentaVerdictSkeleton">
+              <div class="skeleton" style="height:40px; width:60%; margin:0 auto 10px;"></div>
+              <div class="skeleton" style="height:20px; width:40%; margin:0 auto;"></div>
+            </div>
+            <div id="rentaVerdictContent" style="display:none;">
+              <div class="renta-verdict-icon" id="rentaVerdictIcon">🔄</div>
+              <div class="renta-verdict-amount" id="rentaVerdictAmount">—</div>
+              <div class="renta-verdict-label" id="rentaVerdictLabel">Résultat réel après charges</div>
+              <div class="renta-verdict-projection" id="rentaVerdictProjection" style="display:none;">
+                <span class="renta-proj-label">Résultat estimé fin de mois :</span>
+                <span class="renta-proj-value" id="rentaProjFin">—</span>
+                <span class="renta-proj-hint">Basé sur votre rythme actuel</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOC 2 : Point mort -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fas fa-crosshairs"></i> Seuil de rentabilité</h3>
+              <span class="renta-breakeven-target" id="rentaBreakevenTarget">Seuil : —</span>
+            </div>
+            <div class="card-body">
+              <div class="renta-progress-wrap">
+                <div class="renta-progress-track">
+                  <div class="renta-progress-fill" id="rentaProgressFill"></div>
+                  <div class="renta-progress-goal-line" id="rentaGoalLine"></div>
+                </div>
+                <div class="renta-progress-labels">
+                  <span>0 €</span>
+                  <span class="renta-progress-pct" id="rentaProgressPct">0%</span>
+                  <span id="rentaProgressMax">—</span>
+                </div>
+              </div>
+              <p class="renta-breakeven-msg" id="rentaBreakevenMsg">—</p>
+            </div>
+          </div>
+
+          <!-- BLOC 3 : Décomposition théorique vs réelle -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fas fa-table"></i> Décomposition du résultat</h3>
+              <span class="text-muted text-sm">Théorique (recettes) vs Réel (inventaires)</span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-wrapper">
+                <table class="data-table renta-decomp-table" id="rentaDecompTable">
+                  <thead>
+                    <tr>
+                      <th>Poste</th>
+                      <th class="text-right">Théorique</th>
+                      <th class="text-right">Réel</th>
+                      <th class="text-right">Écart</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rentaDecompBody">
+                    <tr><td colspan="4" class="text-center"><div class="skeleton" style="height:18px; margin:8px 0;"></div></td></tr>
+                    <tr><td colspan="4" class="text-center"><div class="skeleton" style="height:18px; margin:8px 0;"></div></td></tr>
+                    <tr><td colspan="4" class="text-center"><div class="skeleton" style="height:18px; margin:8px 0;"></div></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <!-- Bannière écart matière -->
+              <div class="renta-ecart-banner" id="rentaEcartBanner" style="display:none;">
+                <span id="rentaEcartBannerText"></span>
+                <a href="#" class="renta-ecart-link" onclick="navigateTo('inventaires'); return false;">
+                  <i class="fas fa-arrow-right"></i> Voir dans Inventaire &amp; Marges réelles
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOC 4 : Charges fixes du mois -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fas fa-file-invoice-dollar"></i> Charges fixes du mois</h3>
+              <div class="btn-group">
+                <span class="renta-charges-total" id="rentaChargesTotalBadge">0,00 €</span>
+                <button class="btn btn-secondary btn-sm" id="rentaAddChargeBtn">
+                  <i class="fas fa-plus"></i> Ajouter
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div id="rentaChargesGrouped" class="renta-charges-grouped"></div>
+              <div class="empty-state" id="rentaChargesEmpty" style="display:none;">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <p>Aucune charge saisie pour ce mois</p>
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('rentaGoChargesBtn').click()">
+                  Saisir les charges
+                </button>
+              </div>
+              <div class="renta-charges-note">
+                <i class="fas fa-info-circle"></i>
+                Les achats exceptionnels (matériel, travaux) ne sont pas inclus dans ce total.
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOC 5 : Graphique 6 derniers mois -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fas fa-chart-bar"></i> Résultats nets — 6 derniers mois</h3>
+            </div>
+            <div class="card-body" style="height:300px;">
+              <canvas id="rentaHistoChart"></canvas>
+            </div>
+          </div>
+
+        </div><!-- /rentaSubMain -->
+
+        <!-- SOUS-PAGE : GESTION DES CHARGES -->
+        <div id="rentaSubCharges" style="display:none;">
+          <div class="page-header-actions">
+            <div>
+              <h2>Charges fixes</h2>
+              <p class="text-muted">Saisie et gestion par mois</p>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-ghost" id="rentaBackMainBtn">
+                <i class="fas fa-arrow-left"></i> Retour
+              </button>
+            </div>
+          </div>
+
+          <!-- Sélecteur de mois charges -->
+          <div class="renta-month-bar card">
+            <div class="card-body" style="padding:14px 20px;">
+              <div class="renta-month-row">
+                <button class="btn btn-ghost" id="chargesPrevMonth"><i class="fas fa-chevron-left"></i></button>
+                <h3 class="renta-month-label" id="chargesMonthLabel">—</h3>
+                <button class="btn btn-ghost" id="chargesNextMonth"><i class="fas fa-chevron-right"></i></button>
+                <button class="btn btn-secondary btn-sm" id="chargesCopyBtn">
+                  <i class="fas fa-copy"></i> Copier depuis le mois précédent
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Liste groupée par catégorie -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fas fa-list"></i> Charges du mois</h3>
+              <div class="btn-group">
+                <span class="renta-charges-total" id="chargesSubTotal">0,00 €</span>
+                <button class="btn btn-primary btn-sm" id="chargesAddBtn">
+                  <i class="fas fa-plus"></i> Ajouter une charge
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div id="chargesSubGrouped"></div>
+              <div class="empty-state" id="chargesSubEmpty" style="display:none;">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <p>Aucune charge saisie pour ce mois</p>
+                <p class="text-muted text-sm">Utilisez "Copier depuis le mois précédent" pour gagner du temps</p>
+              </div>
+              <div class="renta-charges-note">
+                <i class="fas fa-info-circle"></i>
+                <span>Les charges <strong>exceptionnelles</strong> (matériel, travaux) sont affichées en orange mais ne sont pas incluses dans le calcul de rentabilité mensuelle.</span>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /rentaSubCharges -->
+
+      </section>
+
+      <!-- ========== RESTAURANTS PAGE ========== -->
+      <section class="page" id="page-restaurants">
+        <div class="page-header-actions">
+          <div>
+            <h2>Mes restaurants</h2>
+            <p class="text-muted">Gérez vos établissements et leurs données</p>
+          </div>
+          <button class="btn btn-primary" id="addRestoBtn">
+            <i class="fas fa-plus"></i> Ajouter un restaurant
+          </button>
+        </div>
+        <div class="skeleton-list" id="restoSkeleton">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+        <div id="restoList" style="display:none;"></div>
+        <div class="info-banner" style="margin-top:20px;">
+          <i class="fas fa-info-circle"></i>
+          <span>Les <strong>recettes</strong> et les <strong>prix Mercuriale</strong> sont partagés entre tous les restaurants. Ventes, CA, factures, inventaires et charges sont propres à chaque restaurant.</span>
+        </div>
+      </section>
+
+      <!-- ========== VUE GLOBALE PAGE ========== -->
+      <section class="page" id="page-global">
+        <div class="page-header-actions">
+          <div>
+            <h2>🌐 Vue globale</h2>
+            <p class="text-muted">Comparaison de tous les restaurants</p>
+          </div>
+          <div class="btn-group" style="align-items:center; gap:8px;">
+            <button class="btn btn-ghost" id="globalPrevMonth"><i class="fas fa-chevron-left"></i></button>
+            <span class="renta-month-label" id="globalMonthLabel" style="min-width:160px; text-align:center; font-size:16px;">—</span>
+            <button class="btn btn-ghost" id="globalNextMonth"><i class="fas fa-chevron-right"></i></button>
+          </div>
+        </div>
+        <div id="globalCompareContainer">
+          <div class="skeleton-list" id="globalSkeleton">
+            <div class="skeleton skeleton-row" style="height:60px;"></div>
+            <div class="skeleton skeleton-row" style="height:220px;"></div>
+          </div>
+          <div id="globalCompareTable" style="display:none;"></div>
+        </div>
+      </section>
+
+      <!-- ========== INVENTAIRES PAGE ========== -->
+      <section class="page" id="page-inventaires">
+        <div class="page-header-actions">
+          <div>
+            <h2>Inventaires</h2>
+            <p class="text-muted">Suivi des stocks et analyse des écarts de consommation</p>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" id="invAnalyseBtn" onclick="Inventaire.showAnalyse()">
+              <i class="fas fa-chart-bar"></i> Analyser
+            </button>
+            <button class="btn btn-primary" id="invNewBtn" onclick="Inventaire.showNouvel()">
+              <i class="fas fa-plus"></i> Nouvel inventaire
+            </button>
+          </div>
+        </div>
+
+        <!-- Sous-pages inventaire (liste / nouveau / analyse) -->
+        <!-- == LISTE DES INVENTAIRES == -->
+        <div id="invSubListe">
+          <div class="inv-info-banner" id="invInfoBanner">
+            <i class="fas fa-info-circle"></i>
+            <span>Réalisez au moins <strong>2 inventaires validés</strong> pour accéder à l'analyse des écarts.</span>
+          </div>
+
+          <!-- Skeleton loader -->
+          <div class="skeleton-list" id="invSkeletonListe">
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+            <div class="skeleton skeleton-row"></div>
+          </div>
+
+          <!-- Liste réelle -->
+          <div id="invListeContainer" style="display:none;">
+            <div class="inv-list" id="invListeItems">
+              <!-- Cards injectées par JS -->
+            </div>
+          </div>
+
+          <!-- Empty state -->
+          <div class="empty-state" id="invEmptyState" style="display:none;">
+            <i class="fas fa-clipboard-list" style="font-size:3rem; color:var(--border-color); margin-bottom:1rem;"></i>
+            <h3>Aucun inventaire</h3>
+            <p class="text-muted">Créez votre premier inventaire pour commencer le suivi des stocks.</p>
+            <button class="btn btn-primary" onclick="Inventaire.showNouvel()">
+              <i class="fas fa-plus"></i> Créer le premier inventaire
+            </button>
+          </div>
+        </div>
+
+        <!-- == FORMULAIRE NOUVEL / MODIFIER INVENTAIRE == -->
+        <div id="invSubForm" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <button class="btn btn-ghost" onclick="Inventaire.showListe()">
+                <i class="fas fa-arrow-left"></i> Retour à la liste
+              </button>
+              <h3 id="invFormTitle">Nouvel inventaire</h3>
+            </div>
+            <div class="card-body">
+              <input type="hidden" id="invFormId" />
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Date de l'inventaire *</label>
+                  <input type="date" id="invFormDate" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Libellé *</label>
+                  <input type="text" id="invFormLabel" class="form-control" placeholder="Ex: Inventaire fin de semaine..." />
+                </div>
+              </div>
+              <!-- CSV Import -->
+              <div class="inv-csv-zone" id="invCsvZone">
+                <i class="fas fa-file-csv"></i>
+                <p>Importer via CSV <span class="text-muted">(format : nom_ingredient;quantite;unite)</span></p>
+                <label class="btn btn-secondary btn-sm">
+                  <i class="fas fa-upload"></i> Choisir un fichier CSV
+                  <input type="file" id="invCsvInput" accept=".csv" style="display:none;" />
+                </label>
+              </div>
+
+              <!-- Recherche ingrédient -->
+              <div class="inv-ingredient-search">
+                <div class="search-box">
+                  <i class="fas fa-search"></i>
+                  <input type="text" id="invIngSearch" placeholder="Rechercher un ingrédient de la Mercuriale ou ajouter manuellement..." />
+                </div>
+                <button class="btn btn-secondary" id="invAddIngBtn">
+                  <i class="fas fa-plus"></i> Ajouter
+                </button>
+              </div>
+              <div class="inv-search-results" id="invSearchResults" style="display:none;"></div>
+
+              <!-- Lignes inventaire -->
+              <div class="table-wrapper">
+                <table class="data-table" id="invLignesTable">
+                  <thead>
+                    <tr>
+                      <th>Ingrédient</th>
+                      <th>Qté en stock</th>
+                      <th>Unité</th>
+                      <th>Prix unitaire</th>
+                      <th>Valeur stock</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="invLignesTbody">
+                    <tr id="invLignesEmpty">
+                      <td colspan="6" class="text-center text-muted" style="padding:2rem;">
+                        Ajoutez des ingrédients pour commencer l'inventaire
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr class="inv-total-row">
+                      <td colspan="4" style="text-align:right; font-weight:700;">Valeur totale du stock :</td>
+                      <td id="invTotalValeur" style="font-weight:800; color:var(--primary);">0,00 €</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div class="inv-form-actions">
+                <button class="btn btn-secondary" id="invSaveDraftBtn">
+                  <i class="fas fa-save"></i> Enregistrer en brouillon
+                </button>
+                <button class="btn btn-success" id="invValidateBtn">
+                  <i class="fas fa-check-circle"></i> Valider l'inventaire
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- == ANALYSE DES ECARTS == -->
+        <div id="invSubAnalyse" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <button class="btn btn-ghost" onclick="Inventaire.showListe()">
+                <i class="fas fa-arrow-left"></i> Retour
+              </button>
+              <h3>Analyse des écarts de consommation</h3>
+            </div>
+            <div class="card-body">
+              <!-- Sélection des 2 inventaires -->
+              <div class="form-row inv-analyse-selectors">
+                <div class="form-group">
+                  <label class="form-label"><i class="fas fa-calendar-alt"></i> Inventaire de début (stock initial)</label>
+                  <select id="invAnalyseStart" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label"><i class="fas fa-calendar-alt"></i> Inventaire de fin (stock final)</label>
+                  <select id="invAnalyseEnd" class="form-control"></select>
+                </div>
+                <div class="form-group" style="display:flex; align-items:flex-end;">
+                  <button class="btn btn-primary" id="invLancerAnalyseBtn" style="width:100%;">
+                    <i class="fas fa-calculator"></i> Lancer l'analyse
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Résultats (cachés jusqu'au calcul) -->
+          <div id="invAnalyseResults" style="display:none;">
+            <!-- KPI cards -->
+            <div class="kpi-grid inv-kpi-grid">
+              <div class="kpi-card">
+                <div class="kpi-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);"><i class="fas fa-weight-hanging"></i></div>
+                <div class="kpi-info">
+                  <p class="kpi-label">Conso. réelle (€)</p>
+                  <p class="kpi-value" id="invKpiReelle">—</p>
+                  <p class="kpi-sub">Coût matières réel</p>
+                </div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);"><i class="fas fa-receipt"></i></div>
+                <div class="kpi-info">
+                  <p class="kpi-label">Conso. théorique (€)</p>
+                  <p class="kpi-value" id="invKpiTheorique">—</p>
+                  <p class="kpi-sub">D'après ventes × recettes</p>
+                </div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c);"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="kpi-info">
+                  <p class="kpi-label">Perte totale (€)</p>
+                  <p class="kpi-value inv-loss" id="invKpiPerte">—</p>
+                  <p class="kpi-sub">Écart monétaire</p>
+                </div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-icon" style="background:linear-gradient(135deg,#f97316,#c2410c);"><i class="fas fa-percent"></i></div>
+                <div class="kpi-info">
+                  <p class="kpi-label">Écart global (%)</p>
+                  <p class="kpi-value" id="invKpiEcartPct">—</p>
+                  <p class="kpi-sub">/ conso. théorique</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
+              <button class="btn btn-secondary" id="invExportCsvBtn">
+                <i class="fas fa-file-export"></i> Exporter CSV
+              </button>
+            </div>
+
+            <!-- Tableau détaillé -->
+            <div class="card">
+              <div class="card-header">
+                <h3><i class="fas fa-table"></i> Détail par ingrédient</h3>
+                <div class="filter-tabs" id="invAnalyseFilter">
+                  <button class="filter-tab active" data-filter="all">Tous</button>
+                  <button class="filter-tab" data-filter="alerte">Alertes 🔴</button>
+                  <button class="filter-tab" data-filter="attention">Attention 🟠</button>
+                  <button class="filter-tab" data-filter="normal">Normal 🟢</button>
+                </div>
+              </div>
+              <div class="table-wrapper">
+                <table class="data-table" id="invAnalyseTable">
+                  <thead>
+                    <tr>
+                      <th onclick="Inventaire.sortAnalyse('nom')" style="cursor:pointer;">Ingrédient <i class="fas fa-sort"></i></th>
+                      <th onclick="Inventaire.sortAnalyse('conso_reelle')" style="cursor:pointer;">Conso. réelle <i class="fas fa-sort"></i></th>
+                      <th onclick="Inventaire.sortAnalyse('conso_theorique')" style="cursor:pointer;">Conso. théo. <i class="fas fa-sort"></i></th>
+                      <th onclick="Inventaire.sortAnalyse('ecart_qte')" style="cursor:pointer;">Écart qté <i class="fas fa-sort"></i></th>
+                      <th onclick="Inventaire.sortAnalyse('ecart_pct')" style="cursor:pointer;">Écart % <i class="fas fa-sort"></i></th>
+                      <th onclick="Inventaire.sortAnalyse('perte_euro')" style="cursor:pointer;">Perte € <i class="fas fa-sort"></i></th>
+                      <th>Statut</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="invAnalyseTbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Pane détail expandable -->
+            <div class="inv-detail-pane" id="invDetailPane" style="display:none;">
+              <div class="card">
+                <div class="card-header">
+                  <h3 id="invDetailTitle">Détail ingrédient</h3>
+                  <button class="btn btn-ghost" onclick="document.getElementById('invDetailPane').style.display='none'"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="card-body">
+                  <div class="inv-detail-grid">
+                    <div class="inv-detail-item">
+                      <span class="inv-detail-label">Stock début</span>
+                      <span class="inv-detail-val" id="invDetStockDeb">—</span>
+                    </div>
+                    <div class="inv-detail-item">
+                      <span class="inv-detail-label">Achats période</span>
+                      <span class="inv-detail-val" id="invDetAchats">—</span>
+                    </div>
+                    <div class="inv-detail-item">
+                      <span class="inv-detail-label">Stock fin</span>
+                      <span class="inv-detail-val" id="invDetStockFin">—</span>
+                    </div>
+                    <div class="inv-detail-item">
+                      <span class="inv-detail-label">Conso. réelle</span>
+                      <span class="inv-detail-val" id="invDetConsoReelle">—</span>
+                    </div>
+                    <div class="inv-detail-item">
+                      <span class="inv-detail-label">Conso. théorique</span>
+                      <span class="inv-detail-val" id="invDetConsoTheo">—</span>
+                    </div>
+                    <div class="inv-detail-item">
+                      <span class="inv-detail-label">Utilisation recettes</span>
+                      <span class="inv-detail-val" id="invDetRecipes">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div><!-- /invAnalyseResults -->
+        </div><!-- /invSubAnalyse -->
+
+      </section>
+      <!-- ========== /INVENTAIRES PAGE ========== -->
+
+    </div><!-- /page-container -->
+  </main>
+
+  <!-- ========== MODALS ========== -->
+
+  <!-- Recipe Modal -->
+  <div class="modal-overlay" id="recipeModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="recipeModalTitle">Nouvelle recette</h3>
+        <button class="modal-close" onclick="closeModal('recipeModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="recipeModalId" />
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nom de la recette *</label>
+            <input type="text" id="recipeName" class="form-control" placeholder="Ex: Entrecôte frites" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Catégorie *</label>
+            <select id="recipeCategory" class="form-control">
+              <option value="entrée">Entrée</option>
+              <option value="plat">Plat</option>
+              <option value="dessert">Dessert</option>
+              <option value="boisson">Boisson</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+        </div>
+        <!-- Type de recette -->
+        <div class="form-group">
+          <label class="form-label">Type de recette</label>
+          <div style="display:flex;gap:12px;align-items:center;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;">
+              <input type="radio" id="recipeTypePF" name="recipeType" value="produit_fini" checked
+                style="accent-color:#C0392B;" />
+              🍽️ <strong>Produit fini</strong> — vendu au client
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;">
+              <input type="radio" id="recipeTypeSR" name="recipeType" value="sous_recette"
+                style="accent-color:#C0392B;" />
+              🔧 <strong>Sous-recette</strong> — composant d'autres recettes
+            </label>
+          </div>
+          <p class="field-hint" style="margin-top:6px;"><i class="fas fa-info-circle"></i>
+            Une <em>sous-recette</em> peut être intégrée dans d'autres recettes (ex : sauce, pâte, base…).
+            Son coût est calculé récursivement.</p>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Prix de vente (€) *</label>
+            <input type="number" id="recipePrice" class="form-control" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              Coût de revient (€)
+              <span class="badge" style="background:var(--zelty-light);color:var(--zelty-dark);font-size:10px;" id="recipeAutoCooked">auto</span>
+            </label>
+            <input type="number" id="recipeCost" class="form-control" step="0.01" min="0" placeholder="0.00" />
+          </div>
+        </div>
+
+        <!-- Bouton ingrédients V3 -->
+        <div class="ingredients-shortcut" id="recipeIngredientsShortcut" style="display:none;">
+          <div class="ingredients-summary" id="recipeIngredientsSummary">
+            <i class="fas fa-carrot"></i> <span id="ingredientsSummaryText">Aucun ingrédient lié</span>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="openIngredientsBtn">
+            <i class="fas fa-carrot"></i> Gérer les ingrédients
+          </button>
+        </div>
+        <div class="ingredients-shortcut-new" id="recipeIngredientsNew" style="display:none;">
+          <p class="text-muted text-sm"><i class="fas fa-info-circle"></i> Enregistrez d'abord la recette, puis ajoutez les ingrédients mercuriale.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="recipeDescription" class="form-control" rows="2" placeholder="Description courte..."></textarea>
+        </div>
+        <div class="form-group zelty-field">
+          <label class="form-label">
+            <i class="fas fa-link zelty-color"></i> ID Produit Zelty
+            <span class="optional-badge">Optionnel</span>
+          </label>
+          <input type="text" id="recipeZeltyId" class="form-control zelty-input" placeholder="Ex: prod_abc123..." />
+          <p class="field-hint"><i class="fas fa-info-circle"></i> Renseignez cet ID pour lier ce produit à votre caisse Zelty</p>
+        </div>
+        <div class="form-group">
+          <label class="toggle-row">
+            <span class="form-label mb-0">Recette active</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="recipeActive" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('recipeModal')">Annuler</button>
+        <button class="btn btn-primary" id="saveRecipeBtn">
+          <i class="fas fa-save"></i> Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sale Modal -->
+  <div class="modal-overlay" id="saleModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="saleModalTitle">Nouvelle vente</h3>
+        <button class="modal-close" onclick="closeModal('saleModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="saleModalId" />
+        <div class="info-banner mb-3">
+          <i class="fas fa-pencil-alt"></i>
+          <span>Mode saisie manuelle — Saisissez vos ventes sans caisse connectée</span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date *</label>
+            <input type="date" id="saleDate" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Produit / Recette *</label>
+            <select id="saleRecipe" class="form-control">
+              <option value="">-- Sélectionner --</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Quantité *</label>
+            <input type="number" id="saleQty" class="form-control" min="1" value="1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prix unitaire (€) *</label>
+            <input type="number" id="saleUnitPrice" class="form-control" step="0.01" min="0" placeholder="0.00" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total calculé</label>
+          <div class="total-display" id="saleTotalDisplay">0,00 €</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <input type="text" id="saleNotes" class="form-control" placeholder="Optionnel..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('saleModal')">Annuler</button>
+        <button class="btn btn-primary" id="saveSaleBtn">
+          <i class="fas fa-save"></i> Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue Modal -->
+  <div class="modal-overlay" id="revenueModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="revenueModalTitle">Saisir le CA du jour</h3>
+        <button class="modal-close" onclick="closeModal('revenueModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="revenueModalId" />
+        <div class="info-banner mb-3">
+          <i class="fas fa-keyboard"></i>
+          <span>Mode dégradé — Saisie manuelle du chiffre d'affaires</span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date *</label>
+            <input type="date" id="revenueDate" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Chiffre d'affaires (€) *</label>
+            <input type="number" id="revenueAmount" class="form-control" step="0.01" min="0" placeholder="0.00" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre de couverts</label>
+            <input type="number" id="revenueCovers" class="form-control" min="0" placeholder="0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Source</label>
+            <select id="revenueSource" class="form-control">
+              <option value="manual">Saisie manuelle</option>
+              <option value="zelty">Zelty (importé)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea id="revenueNotes" class="form-control" rows="2" placeholder="Ex: Service du soir complet, privatisation..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('revenueModal')">Annuler</button>
+        <button class="btn btn-primary" id="saveRevenueBtn">
+          <i class="fas fa-save"></i> Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync Modal -->
+  <div class="modal-overlay" id="syncModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3><i class="fas fa-sync-alt fa-spin" id="syncIcon"></i> Synchronisation Zelty</h3>
+        <button class="modal-close" onclick="closeModal('syncModal')" id="syncModalClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="sync-progress" id="syncProgress">
+          <div class="sync-step" id="syncStep1">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Connexion à l'API Zelty...</span>
+          </div>
+          <div class="sync-step pending" id="syncStep2">
+            <i class="fas fa-circle"></i>
+            <span>Récupération des ventes...</span>
+          </div>
+          <div class="sync-step pending" id="syncStep3">
+            <i class="fas fa-circle"></i>
+            <span>Mapping avec les recettes...</span>
+          </div>
+          <div class="sync-step pending" id="syncStep4">
+            <i class="fas fa-circle"></i>
+            <span>Mise à jour du chiffre d'affaires...</span>
+          </div>
+          <div class="sync-step pending" id="syncStep5">
+            <i class="fas fa-circle"></i>
+            <span>Finalisation...</span>
+          </div>
+        </div>
+        <div class="sync-result" id="syncResult" style="display:none;"></div>
+      </div>
+      <div class="modal-footer" id="syncModalFooter" style="display:none;">
+        <button class="btn btn-primary" onclick="closeModal('syncModal')">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3><i class="fas fa-exclamation-triangle text-danger"></i> Confirmer la suppression</h3>
+        <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p id="deleteModalText">Êtes-vous sûr de vouloir supprimer cet élément ?</p>
+        <p class="text-muted text-sm">Cette action est irréversible.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Annuler</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">
+          <i class="fas fa-trash"></i> Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ========== MODAL FOURNISSEUR ========== -->
+  <div class="modal-overlay" id="supplierModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="supplierModalTitle">Nouveau fournisseur</h3>
+        <button class="modal-close" onclick="closeModal('supplierModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="supplierModalId" />
+        <div class="form-group">
+          <label class="form-label">Nom du fournisseur *</label>
+          <input type="text" id="supplierName" class="form-control" placeholder="Ex: Rungis Viandes" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Catégorie *</label>
+          <select id="supplierCategory" class="form-control">
+            <option value="viande">Viande</option>
+            <option value="BOF">BOF (Beurre, Œuf, Fromage)</option>
+            <option value="épicerie">Épicerie</option>
+            <option value="légumes">Légumes / Fruits</option>
+            <option value="poisson">Poisson / Fruits de mer</option>
+            <option value="boisson">Boisson</option>
+            <option value="autres">Autres</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            <input type="text" id="supplierContact" class="form-control" placeholder="06 xx xx xx xx" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="text" id="supplierEmail" class="form-control" placeholder="pro@fournisseur.fr" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea id="supplierNotes" class="form-control" rows="2" placeholder="Jours de livraison, conditions..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('supplierModal')">Annuler</button>
+        <button class="btn btn-primary" id="saveSupplierBtn"><i class="fas fa-save"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL PRODUIT FOURNISSEUR ========== -->
+  <div class="modal-overlay" id="supplierProductModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="supplierProductModalTitle">Ajouter un prix produit</h3>
+        <button class="modal-close" onclick="closeModal('supplierProductModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="spModalId" />
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Fournisseur *</label>
+            <select id="spSupplierId" class="form-control">
+              <option value="">-- Sélectionner --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Catégorie produit</label>
+            <select id="spCategory" class="form-control">
+              <option value="viande">Viande</option>
+              <option value="BOF">BOF</option>
+              <option value="épicerie">Épicerie</option>
+              <option value="légumes">Légumes</option>
+              <option value="poisson">Poisson</option>
+              <option value="boisson">Boisson</option>
+              <option value="autres">Autres</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nom du produit *</label>
+          <input type="text" id="spName" class="form-control" placeholder="Ex: Entrecôte, Beurre doux, Sel fin..." />
+        </div>
+        <!-- ── Prix total HT + Poids → calcul auto prix/unité ── -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Prix total HT (€)
+              <span class="field-hint" style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px;">montant facture</span>
+            </label>
+            <input type="number" id="spPrixTotalHT" class="form-control" step="0.01" min="0" placeholder="0.00"
+              oninput="window.Mercuriale?.calcUnitPrice()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Poids / Qté livrée
+              <span class="field-hint" style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px;">kg, litres ou pièces</span>
+            </label>
+            <input type="number" id="spPoids" class="form-control" step="0.001" min="0" placeholder="0.000"
+              oninput="window.Mercuriale?.calcUnitPrice()" />
+          </div>
+        </div>
+        <!-- Prix/unité calculé (lecture seule) -->
+        <div class="form-group" id="spCalcPriceWrap" style="display:none;">
+          <label class="form-label" style="color:var(--success);">
+            <i class="fas fa-calculator"></i> Prix au kg / unité calculé
+          </label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="text" id="spCalcPrice" class="form-control" readonly
+              style="background:#F0FDF4;border-color:#86EFAC;color:#16A34A;font-weight:700;max-width:140px;" />
+            <span style="font-size:12px;color:var(--text-muted);">= Prix total HT ÷ Poids/Qté</span>
+          </div>
+        </div>
+        <!-- Séparateur -->
+        <div style="border-top:1px solid #F0EDEB;margin:12px 0 10px;"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Prix unitaire (€) *
+              <span class="field-hint" style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px;">rempli auto ou saisir manuellement</span>
+            </label>
+            <input type="number" id="spPrice" class="form-control" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unité *</label>
+            <select id="spUnit" class="form-control">
+              <option value="kg">kg</option>
+              <option value="pièce">pièce</option>
+              <option value="litre">litre</option>
+              <option value="boîte">boîte</option>
+              <option value="lot">lot</option>
+              <option value="barquette">barquette</option>
+              <option value="carton">carton</option>
+              <option value="bouteille">bouteille</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date du prix *</label>
+            <input type="date" id="spDate" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ingrédient recette lié</label>
+            <input type="text" id="spRecipeIngredient" class="form-control" placeholder="Ex: boeuf, beurre..." />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <input type="text" id="spNotes" class="form-control" placeholder="Optionnel..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('supplierProductModal')">Annuler</button>
+        <button class="btn btn-primary" id="saveSupplierProductBtn"><i class="fas fa-save"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL CHARGE FIXE ========== -->
+  <div class="modal-overlay" id="chargeModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="chargeModalTitle">Nouvelle charge fixe</h3>
+        <button class="modal-close" onclick="closeModal('chargeModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="chargeModalId" />
+        <input type="hidden" id="chargeModalAnnee" />
+        <input type="hidden" id="chargeModalMois" />
+        <div class="form-group">
+          <label class="form-label">Libellé *</label>
+          <input type="text" id="chargeLabel" class="form-control" placeholder="Ex: Loyer local, Salaires cuisine..." />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Catégorie</label>
+            <select id="chargeCategory" class="form-control">
+              <option value="loyer">🏠 Loyer</option>
+              <option value="salaires">👥 Salaires</option>
+              <option value="electricite">⚡ Électricité</option>
+              <option value="assurance">🛡️ Assurance</option>
+              <option value="abonnement">📦 Abonnement</option>
+              <option value="autre">📋 Autre</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Montant (€ HT) *</label>
+            <input type="number" id="chargeAmount" class="form-control" step="0.01" min="0" placeholder="0.00" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="renta-checkbox-label">
+            <input type="checkbox" id="chargeExceptionnel" />
+            <span>Charge exceptionnelle (matériel, travaux…)</span>
+          </label>
+          <p class="field-hint" id="chargeExceptionnelHint" style="display:none; color:var(--warning);">
+            <i class="fas fa-exclamation-triangle"></i> Non incluse dans le calcul de rentabilité mensuelle
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('chargeModal')">Annuler</button>
+        <button class="btn btn-primary" id="saveChargeBtn"><i class="fas fa-save"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL IMPORT FACTURE ========== -->
+  <div class="modal-overlay" id="invoiceImportModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-file-upload"></i> Importer une facture PDF</h3>
+        <button class="modal-close" onclick="closeModal('invoiceImportModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <!-- Step 1 : Upload -->
+        <div id="invoiceStep1">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Fournisseur *</label>
+              <select id="invoiceSupplierSelect" class="form-control">
+                <option value="">-- Sélectionner --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date de la facture *</label>
+              <input type="date" id="invoiceDateInput" class="form-control" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Numéro de facture</label>
+            <input type="text" id="invoiceNumberInput" class="form-control" placeholder="Ex: FA-2026-0342" />
+          </div>
+
+          <div class="pdf-drop-zone" id="pdfDropZone">
+            <input type="file" id="pdfFileInput" accept=".pdf,.jpg,.jpeg,.png,.csv" style="display:none;" />
+            <div class="drop-content" id="dropContent">
+              <i class="fas fa-file-pdf"></i>
+              <p class="drop-title">Glissez votre facture ici</p>
+              <p class="drop-sub">PDF, image ou CSV acceptés</p>
+              <button type="button" class="btn btn-outline" onclick="document.getElementById('pdfFileInput').click()">
+                <i class="fas fa-folder-open"></i> Parcourir
+              </button>
+            </div>
+          </div>
+
+          <div class="info-banner mt-2" style="margin-top:12px;">
+            <i class="fas fa-magic"></i>
+            <span>L'analyse automatique détecte les produits, quantités et prix. Vous pouvez corriger avant validation.</span>
+          </div>
+        </div>
+
+        <!-- Step 2 : Saisie / résultats lignes -->
+        <div id="invoiceStep2" style="display:none;">
+          <div class="analysis-header">
+            <div class="analysis-info" id="analysisInfo"></div>
+            <button class="btn btn-secondary btn-sm" id="addInvoiceLineBtn">
+              <i class="fas fa-plus"></i> Ajouter une ligne
+            </button>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table invoice-lines-table">
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th style="width:70px;">Qté</th>
+                  <th style="width:90px;">Unité</th>
+                  <th style="width:110px;">Prix total HT</th>
+                  <th style="width:110px;">Prix unit. HT</th>
+                  <th style="width:90px;">Mercuriale</th>
+                  <th style="width:30px;"></th>
+                </tr>
+              </thead>
+              <tbody id="invoiceLinesBody"></tbody>
+            </table>
+          </div>
+          <div class="invoice-total-row">
+            <span>Total facture :</span>
+            <strong id="invoiceGrandTotal">—</strong>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" id="invoiceModalFooter">
+        <button class="btn btn-secondary" onclick="closeModal('invoiceImportModal')">Annuler</button>
+        <button class="btn btn-primary" id="invoiceAnalyzeBtn">
+          <i class="fas fa-magic"></i> Analyser la facture
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL INGRÉDIENTS RECETTE (V3) ========== -->
+  <div class="modal-overlay" id="ingredientsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-carrot"></i> Ingrédients de la recette</h3>
+        <button class="modal-close" onclick="closeModal('ingredientsModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="ingredientsRecipeInfo" class="info-banner mb-3" style="background:#f0fdf4;border-color:#86efac;color:#14532d;">
+          <i class="fas fa-info-circle"></i>
+          <span id="ingredientsRecipeName">Recette</span>
+        </div>
+
+        <!-- Coût total calculé -->
+        <div class="ingredient-cost-summary" id="ingredientCostSummary">
+          <div class="ics-item">
+            <span class="ics-label">Coût matière total</span>
+            <span class="ics-value" id="icsTotalCost">0,00 €</span>
+          </div>
+          <div class="ics-item">
+            <span class="ics-label">Prix de vente</span>
+            <span class="ics-value" id="icsSellingPrice">—</span>
+          </div>
+          <div class="ics-item">
+            <span class="ics-label">Marge brute</span>
+            <span class="ics-value" id="icsMargin" style="font-weight:800;">—</span>
+          </div>
+          <div class="ics-item">
+            <span class="ics-label">Food cost</span>
+            <span class="ics-value" id="icsFoodCost" style="font-weight:800;">—</span>
+          </div>
+        </div>
+
+        <!-- Liste ingrédients -->
+        <div id="ingredientsList"></div>
+
+        <!-- Ajout ingrédient produit -->
+        <div class="add-ingredient-form" id="addIngredientForm">
+          <h4><i class="fas fa-plus-circle"></i> Ajouter un produit mercuriale</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Produit mercuriale *</label>
+              <select id="ingredientProductSelect" class="form-control">
+                <option value="">-- Choisir un produit --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Prix actuel</label>
+              <div class="price-preview" id="ingredientPricePreview">—</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Quantité utilisée *</label>
+              <input type="number" id="ingredientQty" class="form-control" step="0.001" min="0" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unité *</label>
+              <select id="ingredientUnit" class="form-control">
+                <option value="g">g (grammes)</option>
+                <option value="kg">kg</option>
+                <option value="ml">ml</option>
+                <option value="cl">cl</option>
+                <option value="l">litre</option>
+                <option value="pièce">pièce</option>
+                <option value="portion">portion</option>
+              </select>
+            </div>
+          </div>
+          <div class="ingredient-cost-preview" id="ingredientCostPreview">
+            Coût calculé : <strong id="ingredientCostCalc">—</strong>
+          </div>
+          <button class="btn btn-primary" id="addIngredientConfirmBtn" style="width:100%;">
+            <i class="fas fa-plus"></i> Ajouter cet ingrédient
+          </button>
+        </div>
+
+        <!-- Ajout sous-recette -->
+        <div class="add-ingredient-form" id="addSubRecipeForm"
+          style="margin-top:10px;background:#FDF8FF;border-color:#D8B4FE;">
+          <h4 style="color:#7C3AED;"><i class="fas fa-layer-group"></i> Ajouter une sous-recette</h4>
+          <div class="form-row">
+            <div class="form-group" style="flex:2;">
+              <label class="form-label">Sous-recette *</label>
+              <select id="subRecipeSelect" class="form-control">
+                <option value="">-- Sélectionner une sous-recette --</option>
+              </select>
+              <p class="field-hint"><i class="fas fa-info-circle"></i>
+                Seules les recettes de type <em>sous_recette</em> apparaissent ici.</p>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label class="form-label">Quantité *
+                <span style="font-size:10px;color:var(--text-muted);">(portions)</span>
+              </label>
+              <input type="number" id="subRecipeQty" class="form-control" step="0.001" min="0.001" placeholder="1" value="1" />
+            </div>
+          </div>
+          <div id="subRecipeCostPreview" style="font-size:13px;color:#7C3AED;margin-bottom:8px;display:none;">
+            Coût calculé : <strong id="subRecipeCostCalc">—</strong>
+          </div>
+          <button class="btn btn-outline" id="addSubRecipeBtn"
+            style="width:100%;border-color:#D8B4FE;color:#7C3AED;">
+            <i class="fas fa-layer-group"></i> Ajouter cette sous-recette
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('ingredientsModal')">Fermer</button>
+        <button class="btn btn-primary" id="saveIngredientsBtn">
+          <i class="fas fa-save"></i> Mettre à jour le food cost
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/restaurants.js"></script>
+<script src="js/app.js"></script>
+<script src="js/mercuriale.js"></script>
+<script src="js/factures.js"></script>
+<script src="js/factures-ocr.js"></script>
+<script src="js/pareto.js"></script>
+<script src="js/rentabilite.js"></script>
+<script src="js/inventaire.js"></script>
+<script src="js/pilotage.js"></script>
+<script src="js/dashboard-tabs.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/zelty/proxy.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/tables/[...path].js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "js/*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "css/*.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "img/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/zelty/proxy",
+      "dest": "/api/zelty/proxy.js"
+    },
+    {
+      "src": "/api/tables/(.*)",
+      "dest": "/api/tables/[...path].js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
